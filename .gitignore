@@ -16,3 +16,7 @@
 /sol?/
 /myapi.key
 /.suf
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
