@@ -355,16 +355,42 @@ page_decref(struct PageInfo* pp)
 // Hint 3: look at inc/mmu.h for useful macros that manipulate page
 // table and page directory entries.
 //
+// YY: Almost the same as xv6-pusblic/vm.c:walkpgdir
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+	pde_t *pde;
+	pte_t *pgtab;
+
+	pde = &pgdir[PDX(va)];
+	if (*pde & PTE_P) {
+		// pgtab exists.
+		// Note that PDE stores physical address.
+		pgtab = (pte_t *) KADDR(PTE_ADDR(*pde));
+	} else {
+		struct PageInfo *pp;
+		if (!create) {
+			return NULL;
+		} else {
+			// create == true
+			pp = page_alloc(1); // Zero the allocated page
+			if (pp == NULL) return NULL;
+		}
+		// Increment pp_ref, as page_alloc() is called.
+		pages[PGNUM(page2pa(pp))].pp_ref += 1;
+
+		// Overly generous permission.
+		*pde = page2pa(pp) | PTE_P | PTE_W | PTE_U;
+
+		pgtab = (pte_t*) page2kva(pp);
+	}
+
+	return &pgtab[PTX(va)];
 }
 
 //
 // Map [va, va+size) of virtual address space to physical [pa, pa+size)
-// in the page table rooted at pgdir.  Size is a multiple of PGSIZE, and
+// in the page table rooted at pgdir. Size is a multiple of PGSIZE, and
 // va and pa are both page-aligned.
 // Use permission bits perm|PTE_P for the entries.
 //
@@ -373,10 +399,15 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 // mapped pages.
 //
 // Hint: the TA solution uses pgdir_walk
+// YY: This is almost the same as xv6-public/vm.c/mappages
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+	uint32_t vaddr = (uint32_t)va, paddr = (uint32_t)pa;
+	for (; vaddr < (uint32_t)va + size; vaddr += PGSIZE, paddr += PGSIZE) {
+		pte_t *pte = pgdir_walk(pgdir, (void *)vaddr, 1);
+		*pte = paddr | PTE_P | perm;
+	}
 }
 
 //
@@ -407,14 +438,38 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+	// insert page table if necessary
+	pte_t *pte = pgdir_walk(pgdir, va, 1);
+	if (pte == NULL) {
+		// fail to allocate new page table
+		return -E_NO_MEM;
+	}
+
+	// increment ref count
+	// This increment is lifted here (instead of after doing the map) to
+	// handle the corner-case mentioned above. This prevents the physical 
+	// page from being freed.
+	pp->pp_ref += 1;
+
+	// page table exists, or new page table successfully inserted
+	if (*pte & PTE_P) {
+		// remove if already mapped
+		page_remove(pgdir, va);
+
+		// invalidate tlb
+		tlb_invalidate(pgdir, va);
+	}
+
+	// map
+	*pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+
 	return 0;
 }
 
 //
 // Return the page mapped at virtual address 'va'.
 // If pte_store is not zero, then we store in it the address
-// of the pte for this page.  This is used by page_remove and
+// of the pte for this page.  This is used` by page_remove and
 // can be used to verify page permissions for syscall arguments,
 // but should not be used by most callers.
 //
@@ -425,8 +480,15 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+	pte_t* pte = pgdir_walk(pgdir, va, 0);
+	if (pte_store) {
+		*pte_store = pte;
+	}
+	
+	if (!pte) return NULL;
+
+	physaddr_t pa = PTE_ADDR(*pte);
+	return pa2page(pa);
 }
 
 //
@@ -447,7 +509,18 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+	struct PageInfo *pginfo = page_lookup(pgdir, va, 0);
+	if (!pginfo) return;
+
+	// decrement ref count and free physical page if ref count reaches 0
+	page_decref(pginfo);
+
+	// clear PTE
+	pte_t *pte = pgdir_walk(pgdir, va, 0);
+	memset(pte, 0, sizeof(pte_t));
+
+	// invalidate TLB
+	tlb_invalidate(pgdir, va);
 }
 
 //
