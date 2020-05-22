@@ -176,6 +176,10 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
+	// Set the pages where `pages` is stored as PTE_P | PTE_U
+	sz = ROUNDUP(npages*sizeof(struct PageInfo), PGSIZE);
+	boot_map_region(kern_pgdir, UPAGES, sz, PADDR(pages), PTE_U | PTE_P);
+	
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
 	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
@@ -188,6 +192,9 @@ mem_init(void)
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 
+	// [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed
+	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_P|PTE_W);
+
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
 	// Ie.  the VA range [KERNBASE, 2^32) should map to
@@ -196,6 +203,8 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, KERNBASE, 0xFFFFFFFF - KERNBASE + 1, 0, PTE_P | PTE_W);
+	pte_t *p = pgdir_walk(kern_pgdir, (void *)KERNBASE, 0);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -404,7 +413,11 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	uint32_t vaddr = (uint32_t)va, paddr = (uint32_t)pa;
-	for (; vaddr < (uint32_t)va + size; vaddr += PGSIZE, paddr += PGSIZE) {
+	if ((uint32_t)va + size < (uint32_t)va) cprintf("Overflow!\n");
+
+	// Use `vaddr - size < (uin32_t)va` instead of `vaddr < (uin32_t)va + size` to
+	// handle possible overflow problem.
+	for (; vaddr - size < (uint32_t)va; vaddr += PGSIZE, paddr += PGSIZE) {
 		pte_t *pte = pgdir_walk(pgdir, (void *)vaddr, 1);
 		*pte = paddr | PTE_P | perm;
 	}
