@@ -49,9 +49,10 @@ SECTIONS
 
 	.bss : {
 		PROVIDE(edata = .);
-		*(.bss)
-		PROVIDE(end = .);
-		BYTE(0)
+       *(.dynbss)
+       *(.bss .bss.*)
+       *(COMMON)
+        PROVIDE(end = .);
 	}
 
 
