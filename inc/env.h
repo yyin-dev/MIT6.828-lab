@@ -26,7 +26,7 @@ typedef int32_t envid_t;
 // stands for the current environment.
 
 #define LOG2NENV		10
-#define NENV			(1 << LOG2NENV)
+#define NENV			(1 << LOG2NENV) // 0x10000000000 = 1024
 #define ENVX(envid)		((envid) & (NENV - 1))
 
 // Values of env_status in struct Env
@@ -44,16 +44,16 @@ enum EnvType {
 };
 
 struct Env {
-	struct Trapframe env_tf;	// Saved registers
+	struct Trapframe env_tf;	// Saved registers before being descheduled
 	struct Env *env_link;		// Next free Env
-	envid_t env_id;			// Unique environment identifier
+	envid_t env_id;				// Unique environment identifier of the env using this `struct Env`
 	envid_t env_parent_id;		// env_id of this env's parent
 	enum EnvType env_type;		// Indicates special system environments
 	unsigned env_status;		// Status of the environment
-	uint32_t env_runs;		// Number of times environment has run
+	uint32_t env_runs;			// Number of times environment has run
 
 	// Address space
-	pde_t *env_pgdir;		// Kernel virtual address of page dir
+	pde_t *env_pgdir;			// Kernel virtual address of page dir
 };
 
 #endif // !JOS_INC_ENV_H
