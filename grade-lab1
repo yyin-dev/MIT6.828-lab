@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
+#                ^ This used to be `python`, I changed to `python2.7` explicitly.
 
 import re
 from gradelib import *
