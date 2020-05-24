@@ -25,6 +25,25 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+/* Declaraions for vector entries in trapentry.S */
+void DIVIDE();
+void DEBUG();
+void NMI();
+void BRKPT();
+void OFLOW();
+void BOUND();
+void ILLOP();
+void DEVICE();
+void DBLFLT();
+void TSS();
+void SEGNP();
+void STACK();
+void GPFLT();
+void PGFLT();
+void FPERR();
+void ALIGN();
+void MCHK();
+void SIMDERR();
 
 static const char *trapname(int trapno)
 {
@@ -65,6 +84,30 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+
+	// Define default gate for reserved/unused vector
+	for (int i = 0; i < 32; ++i) SETGATE(idt[i], 0, GD_KT, 0, 0);
+
+	// Refer to IA32-3A 5.3.1 Table 5-1 for isTrap
+	// Trap: 1, 3, 4
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE, 0);
+	SETGATE(idt[T_DEBUG], 1, GD_KT, DEBUG, 0);
+	SETGATE(idt[T_NMI], 0, GD_KT, NMI, 0);
+	SETGATE(idt[T_BRKPT], 1, GD_KT, BRKPT, 0);
+	SETGATE(idt[T_OFLOW], 1, GD_KT, OFLOW, 0);
+	SETGATE(idt[T_BOUND], 0, GD_KT, BOUND, 0);
+	SETGATE(idt[T_ILLOP], 0, GD_KT, ILLOP, 0);
+	SETGATE(idt[T_DEVICE], 0, GD_KT, DEVICE, 0);
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, DBLFLT, 0);
+	SETGATE(idt[T_TSS], 0, GD_KT, TSS, 0);
+	SETGATE(idt[T_SEGNP], 0, GD_KT, SEGNP, 0);
+	SETGATE(idt[T_STACK], 0, GD_KT, STACK, 0);
+	SETGATE(idt[T_GPFLT], 0, GD_KT, GPFLT, 0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT, PGFLT, 0);
+	SETGATE(idt[T_FPERR], 0, GD_KT, FPERR, 0);
+	SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN, 0);
+	SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
