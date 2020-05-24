@@ -44,6 +44,7 @@ void FPERR();
 void ALIGN();
 void MCHK();
 void SIMDERR();
+void SYSCALL();
 
 static const char *trapname(int trapno)
 {
@@ -88,6 +89,11 @@ trap_init(void)
 	// Define default gate for reserved/unused vector
 	for (int i = 0; i < 32; ++i) SETGATE(idt[i], 0, GD_KT, 0, 0);
 
+	// Note:
+	// When you want an interrupt/exception to be used by the user,
+	// set the last argument ot SETGATE to 3, not 1!
+	// This seems trivial but can cause subtle bug.
+
 	// Refer to IA32-3A 5.3.1 Table 5-1 for isTrap
 	// Trap: 1, 3, 4
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE, 0);
@@ -108,6 +114,9 @@ trap_init(void)
 	SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN, 0);
 	SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
+
+	// From Interl 80386 Manual 9.9, we know syscall is trap
+	SETGATE(idt[T_SYSCALL], 1, GD_KT, SYSCALL, 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -192,12 +201,19 @@ trap_dispatch(struct Trapframe *tf)
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 		page_fault_handler(tf);
-		break;
+		return;
 	case T_BRKPT:
 		monitor(tf);
-		break;
-	default:
-		break;
+		return;
+	case T_SYSCALL:
+		// kern/syscall.c:syscall
+		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, 
+                                      tf->tf_regs.reg_edx, 
+                                      tf->tf_regs.reg_ecx, 
+                                      tf->tf_regs.reg_ebx, 
+                                      tf->tf_regs.reg_edi, 
+                                      tf->tf_regs.reg_esi);
+		return;
 	}
 
 	// Unexpected trap: The user process or the kernel has a bug.

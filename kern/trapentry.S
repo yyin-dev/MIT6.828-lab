@@ -74,6 +74,10 @@ TRAPHANDLER(ALIGN, T_ALIGN)
 TRAPHANDLER_NOEC(MCHK, T_MCHK)
 TRAPHANDLER_NOEC(SIMDERR, T_SIMDERR)
 
+# 48, syscall
+# From Intel 80386 Manual 9.10, we know syscall doesn't push error code
+TRAPHANDLER_NOEC(SYSCALL, T_SYSCALL)
+
 
 /*
  * Lab 3: Your code here for _alltraps
