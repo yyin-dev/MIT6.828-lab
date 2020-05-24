@@ -21,20 +21,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
-	uint32_t s_start = (uint32_t) s;
-	uint32_t s_end = (uint32_t)s + len;
-	uint32_t start_va = ROUNDDOWN(s_start, PGSIZE);
-	uint32_t end_va = ROUNDUP(s_end, PGSIZE);
-
-	uint32_t va;
-	for (va = start_va; va < end_va; va += PGSIZE) {
-		// Use curenv->env_pgdir instead of kern_pgdir
-		pte_t* pte = pgdir_walk(curenv->env_pgdir, (void *)va, 0);
-		if (pte == NULL || (*pte & PTE_U) == 0) {
-			cprintf("kern/syscall.c:sys_cputs: Memory error, destory env\n");
-			env_destroy(curenv);
-		}
-	}
+	user_mem_assert(curenv, (void *)s, len, PTE_U);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -83,8 +70,6 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
-
-	cprintf("kern/syscall.c:syscall: syscallno = %d\n", syscallno);
 
 	switch (syscallno) {
 	case SYS_cputs:
