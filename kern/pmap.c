@@ -317,18 +317,20 @@ page_init(void)
 	// free pages!
 	size_t i;
 	for (i = 0; i < npages; i++) {
-		uint32_t pageStartVA = i * PGSIZE;
+		uint32_t pageStartPA = i * PGSIZE;
 
-		if (pageStartVA == 0) {
+		if (pageStartPA == 0) {
 			// (1)
-		} else if (PGSIZE <= pageStartVA && pageStartVA < npages_basemem * PGSIZE) {
+		} else if (pageStartPA == ROUNDDOWN(MPENTRY_PADDR, PGSIZE)) {
+			// Lab 4: mpentry.S code
+		} else if (PGSIZE <= pageStartPA && pageStartPA < npages_basemem * PGSIZE) {
 			// (2) Free
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
 			page_free_list = &pages[i];
-		} else if (IOPHYSMEM <= pageStartVA && pageStartVA < EXTPHYSMEM) {
+		} else if (IOPHYSMEM <= pageStartPA && pageStartPA < EXTPHYSMEM) {
 			// (3)
-		} else if (pageStartVA < PADDR(boot_alloc(0))) { // Remember to convert to physical memory!
+		} else if (pageStartPA < PADDR(boot_alloc(0))) { // Remember to convert to physical memory!
 			// (4)
 		} else {
 			pages[i].pp_ref = 0;
@@ -632,7 +634,14 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	uint32_t sz = ROUNDUP(size, PGSIZE);
+	if (base + sz > MMIOLIM) panic("MMIOLIM overflowed!\n");
+
+	boot_map_region(kern_pgdir, base, sz, pa, PTE_PCD|PTE_PWT);
+	void *reserved = (void *)base;
+	base += sz;
+
+	return reserved;
 }
 
 static uintptr_t user_mem_check_addr;
