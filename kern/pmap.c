@@ -643,7 +643,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	uint32_t sz = ROUNDUP(size, PGSIZE);
 	if (base + sz > MMIOLIM) panic("MMIOLIM overflowed!\n");
 
-	boot_map_region(kern_pgdir, base, sz, pa, PTE_PCD|PTE_PWT);
+	boot_map_region(kern_pgdir, base, sz, pa, PTE_PCD|PTE_PWT|PTE_W);
 	void *reserved = (void *)base;
 	base += sz;
 
