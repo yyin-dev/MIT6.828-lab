@@ -277,6 +277,12 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+	for (int i = 0; i < NCPU; ++i) {
+		uint32_t region_sz = KSTKSIZE + KSTKGAP;
+		uint32_t base_va = KSTACKTOP - i * region_sz - KSTKSIZE;
+		uint32_t base_pa = PADDR(percpu_kstacks[i]);
+		boot_map_region(kern_pgdir, base_va, KSTKSIZE, base_pa, PTE_P|PTE_W);
+	}
 }
 
 // --------------------------------------------------------------
