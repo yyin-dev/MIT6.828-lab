@@ -16,7 +16,7 @@ libmain(int argc, char **argv)
 	envid_t eid = sys_getenvid();
 	for (int i = 0; i < 1024; ++i) {
 		if (envs[i].env_id == eid) {
-			thisenv = &envs[0];
+			thisenv = &envs[i];
 			break;
 		}
 	}
