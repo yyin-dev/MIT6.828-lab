@@ -66,6 +66,10 @@ _pgfault_upcall:
 	#
 	# LAB 4: Your code here.
 
+	# Note: whether using decimal or hex doesn't matter. However,
+	# you must put a dollar sign ($) when using immediate value.
+	# https://stackoverflow.com/a/42728500/9057530
+
 	# This code executes on the exception stack.
 	# For non-recursive case, trap-time stack is the user stack.
 	# For recursive case, trap-time stack is the exception stack.
