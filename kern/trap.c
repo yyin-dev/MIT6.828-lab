@@ -242,12 +242,9 @@ trap_dispatch(struct Trapframe *tf)
 		return;
 	case T_SYSCALL:
 		// kern/syscall.c:syscall
-		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, 
-                                      tf->tf_regs.reg_edx, 
-                                      tf->tf_regs.reg_ecx, 
-                                      tf->tf_regs.reg_ebx, 
-                                      tf->tf_regs.reg_edi, 
-                                      tf->tf_regs.reg_esi);
+		tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, 
+                                      tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, 
+                                      tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
 		return;
 	}
 
@@ -384,6 +381,46 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 4: Your code here.
 
+	// Check with handler
+	if (curenv->env_pgfault_upcall == NULL)
+		goto destroy;
+
+	// Check with allocated user stack
+	user_mem_assert(curenv, (void *)(UXSTACKTOP-PGSIZE), PGSIZE, PTE_W);
+
+	// Set up exception stack
+	uint32_t exceptionStackTop = UXSTACKTOP;
+	if (UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp <= UXSTACKTOP - 1) {
+		exceptionStackTop = tf->tf_esp;
+	}
+
+	// Reserve blank word
+	exceptionStackTop -= 4;
+
+	// Construt trap frame
+	exceptionStackTop -= sizeof(struct UTrapframe);
+	if (exceptionStackTop < USTACKTOP - PGSIZE)
+		goto destroy;
+
+	struct UTrapframe *utf = (struct UTrapframe *)exceptionStackTop;
+	utf->utf_esp = tf->tf_esp;
+	utf->utf_eflags = tf->tf_eflags;
+	utf->utf_eip = tf->tf_eip;
+	utf->utf_regs = tf->tf_regs;
+	utf->utf_err = tf->tf_err;
+	utf->utf_fault_va = fault_va;
+
+	// Invoke page fault handler.
+	// Similar to HW5, You cannot execute the handler on the kernel stack.
+	// Manipulate `tf` and use env_run to branch to the registered handler.
+	tf->tf_eip = (uint32_t)curenv->env_pgfault_upcall;
+	tf->tf_esp = exceptionStackTop;
+
+	// Branches to handler
+	// curenv->env_pgfault_upcall is pfentry.S:_pgfault_upcall.
+	env_run(curenv);
+
+destroy:
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);

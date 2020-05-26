@@ -144,7 +144,12 @@ static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	// LAB 4: Your code here.
-	panic("sys_env_set_pgfault_upcall not implemented");
+	struct Env *e;
+	if (envid2env(envid, &e, 1) < 0)
+		return -E_BAD_ENV;
+
+	e->env_pgfault_upcall = func;
+	return 0;
 }
 
 // Allocate a page of memory and map it at 'va' with permission
@@ -195,8 +200,10 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	// If no page mapped originally, page_remove does nothing
 	page_remove(e->env_pgdir, va);
 
-	if ((res = page_insert(e->env_pgdir, allocated, va, perm)) < 0)
+	if ((res = page_insert(e->env_pgdir, allocated, va, perm)) < 0) {
+		page_free(allocated);
 		return res;
+	}
 
 	return 0;
 }
@@ -381,9 +388,15 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_exofork();
 	case SYS_env_set_status:
 		return sys_env_set_status(a1, a2);
+	case SYS_env_set_pgfault_upcall:
+		return sys_env_set_pgfault_upcall(a1, (void *)a2);
 	case SYS_yield:
 		sys_yield();
 		return 0;
+	case SYS_ipc_try_send:
+		panic("Unimplemented!\n");
+	case SYS_ipc_recv:
+		panic("Unimplemented!\n");
 	default:
 		return -E_INVAL;
 	}

@@ -33,7 +33,7 @@
 .globl _pgfault_upcall
 _pgfault_upcall:
 	# Call the C page fault handler.
-	pushl %esp			# function argument: pointer to UTF
+	pushl %esp				# function argument: pointer to UTF
 	movl _pgfault_handler, %eax
 	call *%eax
 	addl $4, %esp			# pop function argument
@@ -66,17 +66,38 @@ _pgfault_upcall:
 	#
 	# LAB 4: Your code here.
 
+	# This code executes on the exception stack.
+	# For non-recursive case, trap-time stack is the user stack.
+	# For recursive case, trap-time stack is the exception stack.
+	# utf->utf_esp points to the trap-time stack.
+	# urf->utf_esp is 12 words, 0x30 bytes, above current %esp.
+	# urf->utf_eip is 10 words, 0x28 bytes, above current %esp
+	movl 0x30(%esp), %eax # %eax = *(%esp + 48) = utf->utf_esp
+	movl 0x28(%esp), %ecx # %ecx = *(%esp + 40) = utf->utf_eip
+	subl $4, %eax	      # Push utf->utf_eip
+	movl %ecx, (%eax)
+
+	# As we have pushed onto the trap-time stack, we should update %esp
+	# to switch to.
+	movl %eax, 0x30(%esp)
+
 	# Restore the trap-time registers.  After you do this, you
 	# can no longer modify any general-purpose registers.
 	# LAB 4: Your code here.
+	addl $8, %esp	# Discard fault_va, tf_err
+	popal
 
 	# Restore eflags from the stack.  After you do this, you can
 	# no longer use arithmetic operations or anything else that
 	# modifies eflags.
 	# LAB 4: Your code here.
+	addl $4, %esp   # Discard utf_eip
+	popf
 
 	# Switch back to the adjusted trap-time stack.
 	# LAB 4: Your code here.
+	popl %esp
 
 	# Return to re-execute the instruction that faulted.
 	# LAB 4: Your code here.
+	ret
