@@ -385,9 +385,6 @@ page_fault_handler(struct Trapframe *tf)
 	if (curenv->env_pgfault_upcall == NULL)
 		goto destroy;
 
-	// Check with allocated user stack
-	user_mem_assert(curenv, (void *)(UXSTACKTOP-PGSIZE), PGSIZE, PTE_W);
-
 	// Set up exception stack
 	uint32_t exceptionStackTop = UXSTACKTOP;
 	if (UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp <= UXSTACKTOP - 1) {
@@ -396,6 +393,10 @@ page_fault_handler(struct Trapframe *tf)
 
 	// Reserve blank word
 	exceptionStackTop -= 4;
+
+	// Check with allocated user stack
+	uint32_t sz = sizeof(struct Trapframe);
+	user_mem_assert(curenv, (void *)(exceptionStackTop - sz), sz, PTE_W);
 
 	// Construt trap frame
 	exceptionStackTop -= sizeof(struct UTrapframe);
