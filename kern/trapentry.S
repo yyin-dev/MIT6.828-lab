@@ -75,6 +75,14 @@ TRAPHANDLER(ALIGN, T_ALIGN)
 TRAPHANDLER_NOEC(MCHK, T_MCHK)
 TRAPHANDLER_NOEC(SIMDERR, T_SIMDERR)
 
+# (+32) 0 - 15 ==> 32 - 47, IRQ (interrupt request)
+# The processor never pushes error code for IRQ
+TRAPHANDLER_NOEC(TIMER, IRQ_OFFSET+IRQ_TIMER)
+TRAPHANDLER_NOEC(KBD, IRQ_OFFSET+IRQ_KBD)
+TRAPHANDLER_NOEC(SERIAL, IRQ_OFFSET+IRQ_SERIAL)
+TRAPHANDLER_NOEC(SPURIOUS, IRQ_OFFSET+IRQ_SPURIOUS)
+TRAPHANDLER_NOEC(IDE, IRQ_OFFSET+IRQ_IDE)
+
 # 48, syscall
 # From Intel 80386 Manual 9.10, we know syscall doesn't push error code
 TRAPHANDLER_NOEC(SYSCALL, T_SYSCALL)
@@ -103,12 +111,3 @@ _alltraps:
   pushl %esp # pointing to a 'struct trapframe`, as an arg to trap
   call trap
   addl $4, %esp # Pop the argument
-
-# Return falls through to trapret...
-.globl trapret
-trapret:
-  popal
-  popl %es
-  popl %ds
-  addl $0x8, %esp  # trapno and errcode
-  iret # Pops %cs, $eip, %flags, %esp, %ss from stack

@@ -51,6 +51,12 @@ void MCHK();
 void SIMDERR();
 void SYSCALL();
 
+void TIMER();
+void KBD();
+void SERIAL();
+void SPURIOUS();
+void IDE();
+
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -104,10 +110,10 @@ trap_init(void)
 	// Refer to IA32-3A 5.3.1 Table 5-1 for isTrap
 	// Trap: 1, 3, 4
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE, 0);
-	SETGATE(idt[T_DEBUG], 1, GD_KT, DEBUG, 0);
+	SETGATE(idt[T_DEBUG], 0, GD_KT, DEBUG, 0);
 	SETGATE(idt[T_NMI], 0, GD_KT, NMI, 0);
-	SETGATE(idt[T_BRKPT], 1, GD_KT, BRKPT, 3); // Lab3 Exercise5: allow user's call
-	SETGATE(idt[T_OFLOW], 1, GD_KT, OFLOW, 0);
+	SETGATE(idt[T_BRKPT], 0, GD_KT, BRKPT, 3); // Lab3 Exercise5: allow user's call
+	SETGATE(idt[T_OFLOW], 0, GD_KT, OFLOW, 0);
 	SETGATE(idt[T_BOUND], 0, GD_KT, BOUND, 0);
 	SETGATE(idt[T_ILLOP], 0, GD_KT, ILLOP, 0);
 	SETGATE(idt[T_DEVICE], 0, GD_KT, DEVICE, 0);
@@ -122,8 +128,14 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
 
+	SETGATE(idt[IRQ_OFFSET+IRQ_TIMER], 0, GD_KT, TIMER, 0);
+	SETGATE(idt[IRQ_OFFSET+IRQ_KBD], 0, GD_KT, KBD, 0);
+	SETGATE(idt[IRQ_OFFSET+IRQ_SERIAL], 0, GD_KT, SERIAL, 0);
+	SETGATE(idt[IRQ_OFFSET+IRQ_SPURIOUS], 0, GD_KT, SPURIOUS, 0);
+	SETGATE(idt[IRQ_OFFSET+IRQ_IDE], 0, GD_KT, IDE, 0);
+
 	// From Interl 80386 Manual 9.9, we know syscall is trap
-	SETGATE(idt[T_SYSCALL], 1, GD_KT, SYSCALL, 3);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, SYSCALL, 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -260,6 +272,12 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		cprintf("Timer interrupt on irq 0\n");
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
