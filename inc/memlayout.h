@@ -170,7 +170,7 @@ extern volatile pde_t uvpd[];     // VA of current page directory
  * Read/write to the kernel, read-only to user programs.
  *
  * Each struct PageInfo stores metadata for one physical page.
- * Is it NOT the physical page itself, but there is a one-to-one
+ * It is NOT the physical page itself, but there is a one-to-one
  * correspondence between physical pages and struct PageInfo's.
  * You can map a struct PageInfo * to the corresponding physical address
  * with page2pa() in kern/pmap.h.

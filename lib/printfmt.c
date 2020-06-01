@@ -86,6 +86,7 @@ getint(va_list *ap, int lflag)
 
 
 // Main function to format and print a string.
+// YY: `...` notation: https://stackoverflow.com/a/2735590/9057530
 void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 
 void
@@ -214,11 +215,9 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
 		// (unsigned) octal
 		case 'o':
-			// Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+			num = getuint(&ap, lflag);
+			base = 8;
+			goto number;
 
 		// pointer
 		case 'p':

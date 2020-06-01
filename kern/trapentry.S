@@ -48,9 +48,66 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
+# Refer to IA32-3A 5.3.1 Table 5-1 for whether the processor pushes error code.
+# Interrupt/Exception that pushes error code: 8, 10 - 14, 17.
+
+# 0 - 8
+TRAPHANDLER_NOEC(DIVIDE, T_DIVIDE)
+TRAPHANDLER_NOEC(DEBUG, T_DEBUG)
+TRAPHANDLER_NOEC(NMI, T_NMI)
+TRAPHANDLER_NOEC(BRKPT, T_BRKPT)
+TRAPHANDLER_NOEC(OFLOW, T_OFLOW)
+TRAPHANDLER_NOEC(BOUND, T_BOUND)
+TRAPHANDLER_NOEC(ILLOP, T_ILLOP)
+TRAPHANDLER_NOEC(DEVICE, T_DEVICE)
+TRAPHANDLER(DBLFLT, T_DBLFLT)
+
+# 10 - 14
+TRAPHANDLER(TSS, T_TSS)
+TRAPHANDLER(SEGNP, T_SEGNP)
+TRAPHANDLER(STACK, T_STACK)
+TRAPHANDLER(GPFLT, T_GPFLT)
+TRAPHANDLER(PGFLT, T_PGFLT)
+
+# 16 - 19
+TRAPHANDLER_NOEC(FPERR, T_FPERR)
+TRAPHANDLER(ALIGN, T_ALIGN)
+TRAPHANDLER_NOEC(MCHK, T_MCHK)
+TRAPHANDLER_NOEC(SIMDERR, T_SIMDERR)
+
+# (+32) 0 - 15 ==> 32 - 47, IRQ (interrupt request)
+# The processor never pushes error code for IRQ
+TRAPHANDLER_NOEC(TIMER, IRQ_OFFSET+IRQ_TIMER)
+TRAPHANDLER_NOEC(KBD, IRQ_OFFSET+IRQ_KBD)
+TRAPHANDLER_NOEC(SERIAL, IRQ_OFFSET+IRQ_SERIAL)
+TRAPHANDLER_NOEC(SPURIOUS, IRQ_OFFSET+IRQ_SPURIOUS)
+TRAPHANDLER_NOEC(IDE, IRQ_OFFSET+IRQ_IDE)
+
+# 48, syscall
+# From Intel 80386 Manual 9.10, we know syscall doesn't push error code
+TRAPHANDLER_NOEC(SYSCALL, T_SYSCALL)
 
 
 /*
  * Lab 3: Your code here for _alltraps
  */
 
+# Very similar to xv6-public/trapasm.S
+.globl _alltraps
+_alltraps:
+  # Build trap frame.
+  pushl %ds
+  pushl %es
+  pushal 	# Construt `struct PushRegs`
+  
+  # Set segment selectors:
+  # (1) The processor sets %cs and %ss 
+  # (2) alltraps sets up data segments by setting %ds and %es.
+  movw $(GD_KD), %ax
+  movw %ax, %ds
+  movw %ax, %es
+
+  # Call trap(tf), where tf=%esp
+  pushl %esp # pointing to a 'struct trapframe`, as an arg to trap
+  call trap
+  addl $4, %esp # Pop the argument

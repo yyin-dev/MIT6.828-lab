@@ -200,6 +200,10 @@ cga_putc(int c)
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
+		// YY:
+		// void *memmove(void *dest, const void *src, size_t n);
+		// The memmove() function copies n bytes from src to dest.
+		// When the console is full, jump to a new empty row.
 		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
 		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
 			crt_buf[i] = 0x0700 | ' ';
