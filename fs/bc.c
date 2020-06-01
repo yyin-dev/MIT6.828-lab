@@ -49,6 +49,11 @@ bc_pgfault(struct UTrapframe *utf)
 	//
 	// LAB 5: you code here:
 
+	uint32_t secno = blockno * BLKSIZE / SECTSIZE;
+	addr = ROUNDDOWN(addr, PGSIZE);
+	sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W);
+	ide_read(secno, addr, 1);
+
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
 	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
@@ -72,12 +77,30 @@ void
 flush_block(void *addr)
 {
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
+	int r;
 
 	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+
+	// Check if write needed
+	if (!va_is_mapped(addr) || !va_is_dirty(addr)) return;
+
+	// Block mapped and dirty
+	uint32_t secno = blockno * BLKSIZE / SECTSIZE;
+	addr = ROUNDDOWN(addr, PGSIZE);
+	ide_write(secno, addr, 1);
+
+	// This is copied from bg_pgfault. Why this clears the dirty bit?
+	// The originally mapped page is removed if any, and the new page
+	// is mapped, so here the content of the page is not changed at
+	// all, but the PTE in the page table is changed.
+	// upvt[PGNUM(addr)] gives the PTE of addr. Logical anding with
+	// PTE_SYSCALL discards any other flags except PTE_SYSCALL, so the
+	// dirty bit is cleared.
+	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
+		panic("in bc_pgfault, sys_page_map: %e", r);
 }
 
 // Test that the block cache works, by smashing the superblock and

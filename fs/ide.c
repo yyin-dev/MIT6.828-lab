@@ -60,6 +60,8 @@ ide_set_disk(int d)
 }
 
 
+// YY: Read nsecs of sectors starting from secno
+// from disk into memory at dst.
 int
 ide_read(uint32_t secno, void *dst, size_t nsecs)
 {
