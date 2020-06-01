@@ -31,6 +31,20 @@ block_is_free(uint32_t blockno)
 {
 	if (super == 0 || blockno >= super->s_nblocks)
 		return 0;
+
+	// bitmap is declared as: uint32_t *bitmap. Each bit
+	// represents one block (not sector).
+	// 1. Byte position
+	// blockno / 32 = blockno >> 5.
+	// bitmap[blockno/32] = *(bitmap + 4 * (blockno/32))
+	//                    = *(uint32_t *)((uint)bitmap + blockno/8).
+	// blockno/8 is the byte index of the bit in bitmap.
+	// If blockno = 9, then (bitmap + 1) is the address of the byte in
+	// bitmap that contains the bit for block 9.
+	// 2. Bit position within byte
+	// If blockno = 33, 1 << (blockno % 32) = 00000000 00000000 00000000 00000010.
+	//
+	// So bitmap[blockno/32] & (1 << (blockno % 32)) is 0 if free, 1 if allocated.
 	if (bitmap[blockno / 32] & (1 << (blockno % 32)))
 		return 1;
 	return 0;
@@ -62,7 +76,21 @@ alloc_block(void)
 	// super->s_nblocks blocks in the disk altogether.
 
 	// LAB 5: Your code here.
-	panic("alloc_block not implemented");
+	if (super == NULL) panic("Cannot find super block");
+
+	for (int i = 0; i < super->s_nblocks; i++) {
+		// Note that 1 means free, while 0 means allocated.
+		uint8_t bit = bitmap[i/32] & (1 << (i%32));
+
+		if (bit) {
+			// free block found, mark it as allocated by changing bit to 0
+			bitmap[i/32] &= ~(1<<(i%32));
+			void *addr = &bitmap[i/32];
+			flush_block(addr);
+			return i;
+		}
+	}
+
 	return -E_NO_DISK;
 }
 
