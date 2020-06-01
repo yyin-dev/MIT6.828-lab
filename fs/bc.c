@@ -48,11 +48,10 @@ bc_pgfault(struct UTrapframe *utf)
 	// the disk.
 	//
 	// LAB 5: you code here:
-
 	uint32_t secno = blockno * BLKSIZE / SECTSIZE;
 	addr = ROUNDDOWN(addr, PGSIZE);
 	sys_page_alloc(0, addr, PTE_P|PTE_U|PTE_W);
-	ide_read(secno, addr, 1);
+	ide_read(secno, addr, BLKSECTS);
 
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
@@ -90,7 +89,7 @@ flush_block(void *addr)
 	// Block mapped and dirty
 	uint32_t secno = blockno * BLKSIZE / SECTSIZE;
 	addr = ROUNDDOWN(addr, PGSIZE);
-	ide_write(secno, addr, 1);
+	ide_write(secno, addr, BLKSECTS);
 
 	// This is copied from bg_pgfault. Why this clears the dirty bit?
 	// The originally mapped page is removed if any, and the new page
