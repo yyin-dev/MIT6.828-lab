@@ -86,7 +86,10 @@ duppage(envid_t envid, unsigned pn)
 	if (pte == NO_PTE || (pte & PTE_P) == 0)
 		return 0;
 
-	if ((pte & PTE_W) || (pte & PTE_COW)) {
+	if (pte & PTE_SHARE) {
+		if ((r = sys_page_map(0, va, envid, va, PTE_P|PTE_U|PTE_W|PTE_SHARE)) < 0)
+			panic("duppage: %e\n", r);
+	} else if ((pte & PTE_W) || (pte & PTE_COW)) {
 		if ((r = sys_page_map(0, va, envid, va, PTE_U|PTE_COW|PTE_P)) < 0)
 			panic("duppage: cannot map COW into new env. %e\n", r);
 

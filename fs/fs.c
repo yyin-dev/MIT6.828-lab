@@ -168,7 +168,6 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 	int allocated_blockno;
 	int res;
 
-	cprintf("filebno: %u\n");
 	if (filebno < NDIRECT) {
 		if (ppdiskbno)
 			*ppdiskbno = &(f->f_direct[filebno]);

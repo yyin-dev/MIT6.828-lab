@@ -302,6 +302,22 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	extern volatile pte_t uvpt[];     // VA of "virtual page table"
+	extern volatile pde_t uvpd[];     // VA of current page directory
+
+	for (uint32_t va = 0; va < UXSTACKTOP - PGSIZE ; va += PGSIZE) {
+		pde_t pde = uvpd[PDX(va)];
+		pte_t pte;
+		if (pde & PTE_P) {
+			pte = uvpt[PGNUM(va)];
+			if ((pte & PTE_P) && (pte & PTE_SHARE)) {
+				sys_page_map(0, (void *)va, child, (void *)va, 
+							 PTE_P|PTE_U|PTE_W|PTE_SHARE);
+			}
+		}
+	}
+	return 0;
+
 	return 0;
 }
 
