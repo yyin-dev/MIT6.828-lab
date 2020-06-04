@@ -29,8 +29,6 @@ pgfault(struct UTrapframe *utf)
 	pte_t pte = get_pte(addr);
 	int r;
 
-	cprintf("pgfault handler invoked in [%x], addr: 0x%08x\n", sys_getenvid(), addr);
-
 	// Check that the faulting access was (1) a write, and (2) to a
 	// copy-on-write page.  If not, panic.
 	// Hint:
