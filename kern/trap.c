@@ -412,7 +412,7 @@ page_fault_handler(struct Trapframe *tf)
 	// Reserve blank word
 	exceptionStackTop -= 4;
 
-	// Check with allocated user stack
+	// Check with allocated user exception stack
 	uint32_t sz = sizeof(struct Trapframe);
 	user_mem_assert(curenv, (void *)(exceptionStackTop - sz), sz, PTE_W);
 

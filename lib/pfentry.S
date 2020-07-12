@@ -59,6 +59,14 @@ _pgfault_upcall:
 	#   note that the word we're pushing now will fit in the
 	#   blank word that the kernel reserved for us.
 	#
+	# YY: 
+	#	Why we cannot use `ret`? What `ret` does it pop return address from
+	# 	the stack and then jumps to that address. Nothing else. So with `ret`,
+	#   you cannot switch before calling `ret`, otherwise you cannot pop the
+	# 	right address. If you switch stack before calling return, then you
+	#	need to pop the return address and save it somewhere, then call `jump`.
+	# 	However, as mentioned above, you cannot.
+	#
 	# Throughout the remaining code, think carefully about what
 	# registers are available for intermediate calculations.  You
 	# may find that you have to rearrange your code in non-obvious
@@ -70,6 +78,7 @@ _pgfault_upcall:
 	# you must put a dollar sign ($) when using immediate value.
 	# https://stackoverflow.com/a/42728500/9057530
 
+	# Push return address to trap-time stack. 
 	# This code executes on the exception stack.
 	# For non-recursive case, trap-time stack is the user stack.
 	# For recursive case, trap-time stack is the exception stack.
