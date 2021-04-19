@@ -276,7 +276,7 @@ page_init(void)
 			page_free_list = &pages[i];
 		} else if (IOPHYSMEM <= pageStartVA && pageStartVA < EXTPHYSMEM) {
 			// (3)
-		} else if (pageStartVA < PADDR(boot_alloc(0))) { // Remember to convert to physical memory!
+		} else if (pageStartVA < PADDR(boot_alloc(0))) { // Remember to convert to physical memory! boot_alloc returns virtual memory
 			// (4)
 		} else {
 			pages[i].pp_ref = 0;
@@ -482,7 +482,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 //
 // Return the page mapped at virtual address 'va'.
 // If pte_store is not zero, then we store in it the address
-// of the pte for this page.  This is used` by page_remove and
+// of the pte for this page.  This is used by page_remove and
 // can be used to verify page permissions for syscall arguments,
 // but should not be used by most callers.
 //
